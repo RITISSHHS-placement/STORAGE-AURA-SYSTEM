@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AURA STORAGE — Edge Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/static/css/global.css"/>
+<style>
+/* ── HERO ──────────────────────────────────────────────── */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  text-align: center;
+  padding: 0 2rem;
+}
+
+.hero-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 400;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--teal);
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeUp 0.8s 0.3s forwards;
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.hero-eyebrow::before,
+.hero-eyebrow::after {
+  content: '';
+  width: 40px;
+  height: 1px;
+  background: var(--teal);
+  opacity: 0.5;
+}
+
+.hero-title {
+  font-size: clamp(4rem, 12vw, 9rem);
+  font-weight: 800;
+  line-height: 0.92;
+  letter-spacing: -0.04em;
+  opacity: 0;
+  transform: translateY(40px);
+  animation: fadeUp 0.9s 0.5s forwards;
+  margin-bottom: 1.5rem;
+}
+.hero-title span {
+  background: linear-gradient(135deg, #fff 0%, var(--teal) 50%, #a78bfa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-sub {
+  font-size: clamp(0.9rem, 2vw, 1.15rem);
+  font-weight: 300;
+  color: var(--muted);
+  max-width: 560px;
+  line-height: 1.7;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeUp 0.9s 0.7s forwards;
+  margin-bottom: 3rem;
+}
+
+.hero-cta {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeUp 0.9s 0.9s forwards;
+}
+
+/* ── STATS BAR ─────────────────────────────────────────── */
+.stats-bar {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  backdrop-filter: blur(20px);
+  background: rgba(255,255,255,0.03);
+  overflow: hidden;
+  opacity: 0;
+  animation: fadeUp 0.9s 1.1s forwards;
+  margin-top: 5rem;
+}
+.stat-item {
+  padding: 1.5rem 2.5rem;
+  border-right: 1px solid var(--border);
+  text-align: center;
+  transition: background 0.3s;
+}
+.stat-item:last-child { border-right: none; }
+.stat-item:hover { background: rgba(78,205,196,0.05); }
+.stat-num {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+.stat-num span { color: var(--teal); }
+.stat-label {
+  font-size: 0.72rem;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-top: 0.3rem;
+}
+
+/* ── MODULES GRID ──────────────────────────────────────── */
+.modules-section {
+  padding: 8rem 2rem;
+  max-width: 1300px;
+  margin: 0 auto;
+}
+
+.section-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--teal);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+.section-label::before {
+  content: '';
+  width: 24px;
+  height: 1px;
+  background: var(--teal);
+}
+
+.section-title {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  margin-bottom: 1rem;
+  color: #fff;
+}
+.section-title em {
+  font-style: normal;
+  color: var(--muted);
+  font-weight: 300;
+}
+
+.modules-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5px;
+  margin-top: 4rem;
+  border-radius: 24px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.module-card {
+  position: relative;
+  padding: 3rem;
+  background: rgba(255,255,255,0.02);
+  cursor: pointer;
+  overflow: hidden;
+  transition: background 0.4s;
+  text-decoration: none;
+  display: block;
+  border: none;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.module-card:nth-child(2n) { border-right: none; }
+.module-card:nth-child(3),
+.module-card:nth-child(4) { border-bottom: none; }
+
+.module-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at var(--mx,50%) var(--my,50%), rgba(78,205,196,0.08) 0%, transparent 60%);
+  opacity: 0;
+  transition: opacity 0.4s;
+  pointer-events: none;
+}
+.module-card:hover::before { opacity: 1; }
+.module-card:hover { background: rgba(78,205,196,0.03); }
+
+.module-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--muted);
+  letter-spacing: 0.12em;
+  margin-bottom: 2rem;
+}
+
+.module-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+.module-icon::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 15px;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.m1 .module-icon { background: rgba(78,205,196,0.12); }
+.m2 .module-icon { background: rgba(255,107,107,0.12); }
+.m3 .module-icon { background: rgba(167,139,250,0.12); }
+.m4 .module-icon { background: rgba(255,214,0,0.12); }
+
+.module-title {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 0.6rem;
+  letter-spacing: -0.02em;
+}
+
+.module-desc {
+  font-size: 0.9rem;
+  color: var(--muted);
+  line-height: 1.65;
+  margin-bottom: 2rem;
+}
+
+.module-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+}
+.tag {
+  padding: 0.3rem 0.8rem;
+  border-radius: 100px;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+.m1 .tag { border-color: rgba(78,205,196,0.3); color: var(--teal); }
+.m2 .tag { border-color: rgba(255,107,107,0.3); color: #ff6b6b; }
+.m3 .tag { border-color: rgba(167,139,250,0.3); color: #a78bfa; }
+.m4 .tag { border-color: rgba(255,214,0,0.3); color: #ffd600; }
+
+.module-arrow {
+  position: absolute;
+  bottom: 2.5rem;
+  right: 2.5rem;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+  color: var(--muted);
+}
+.module-card:hover .module-arrow {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: #000;
+  transform: translate(4px, -4px);
+}
+
+/* ── TECH SECTION ──────────────────────────────────────── */
+.tech-section {
+  border-top: 1px solid var(--border);
+  padding: 6rem 2rem;
+  max-width: 1300px;
+  margin: 0 auto;
+}
+
+.tech-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+  margin-top: 4rem;
+}
+
+.tech-card {
+  padding: 2rem;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.02);
+  transition: border-color 0.3s, transform 0.3s;
+}
+.tech-card:hover {
+  border-color: rgba(78,205,196,0.3);
+  transform: translateY(-4px);
+}
+.tech-card-icon { font-size: 1.5rem; margin-bottom: 1rem; }
+.tech-card-title { font-size: 1rem; font-weight: 600; color: #fff; margin-bottom: 0.5rem; }
+.tech-card-desc { font-size: 0.85rem; color: var(--muted); line-height: 1.6; }
+
+/* ── FOOTER ────────────────────────────────────────────── */
+.footer {
+  border-top: 1px solid var(--border);
+  padding: 3rem 2rem;
+  max-width: 1300px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.footer-logo {
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+.footer-logo span { color: var(--teal); }
+.footer-meta {
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-align: right;
+}
+
+@keyframes fadeUp {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 768px) {
+  .modules-grid { grid-template-columns: 1fr; }
+  .module-card { border-right: none !important; }
+  .tech-grid { grid-template-columns: 1fr; }
+  .stats-bar { flex-wrap: wrap; }
+  .stat-item { border-right: none; border-bottom: 1px solid var(--border); flex: 1 1 40%; }
+}
+</style>
+</head>
+<body>
+<!-- Canvas for particles -->
+<canvas id="particles-canvas"></canvas>
+
+<!-- Mouse-follow ambient glow -->
+<div class="ambient-glow" id="ambientGlow"></div>
+
+<!-- Nav -->
+<nav class="nav">
+  <div class="nav-logo">AURA<span>STORAGE</span></div>
+  <div class="nav-links">
+    <a href="#modules" class="nav-link">Modules</a>
+    <a href="#tech" class="nav-link">Technology</a>
+    <a href="/module/1" class="btn btn-sm btn-outline">Launch App</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-eyebrow">Adaptive Unified Resource Architecture</div>
+
+  <h1 class="hero-title">
+    <span>Storage that<br/>thinks.</span>
+  </h1>
+
+  <p class="hero-sub">
+    AI-powered edge storage intelligence — classifying, predicting, securing,
+    and optimizing every byte before it hits the drive.
+  </p>
+
+  <div class="hero-cta">
+    <a href="/module/1" class="btn btn-primary">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      Start Analysis
+    </a>
+    <a href="#modules" class="btn btn-outline">Explore Modules</a>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat-item">
+      <div class="stat-num">3.5<span>×</span></div>
+      <div class="stat-label">Lifespan Extension</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">70<span>%</span></div>
+      <div class="stat-label">Write Reduction</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">89<span>%</span></div>
+      <div class="stat-label">Prediction Accuracy</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">256<span>b</span></div>
+      <div class="stat-label">AES Encryption</div>
+    </div>
+  </div>
+</section>
+
+<!-- Modules -->
+<section class="modules-section" id="modules">
+  <div class="section-label">Core Modules</div>
+  <h2 class="section-title">Four pillars of <em>edge intelligence</em></h2>
+
+  <div class="modules-grid">
+
+    <!-- Module 1 -->
+    <a href="/module/1" class="module-card m1" id="card1">
+      <div class="module-num">01 — DATA MANAGER</div>
+      <div class="module-icon">🧠</div>
+      <h3 class="module-title">Intelligent Data Manager</h3>
+      <p class="module-desc">YOLOv8-powered frame classification discards duplicates and empty sky in real-time, keeping only what matters — critical, important, and normal frames.</p>
+      <div class="module-tags">
+        <span class="tag">YOLOv8</span>
+        <span class="tag">SSIM</span>
+        <span class="tag">H.264</span>
+        <span class="tag">Edge AI</span>
+      </div>
+      <div class="module-arrow">→</div>
+    </a>
+
+    <!-- Module 2 -->
+    <a href="/module/2" class="module-card m2" id="card2">
+      <div class="module-num">02 — HEALTH ENGINE</div>
+      <div class="module-icon">❤️‍🩹</div>
+      <h3 class="module-title">Predictive Health Engine</h3>
+      <p class="module-desc">LSTM neural network monitors 12 S.M.A.R.T. metrics over a 14-day window, predicting drive failure weeks before it happens with 89.3% accuracy.</p>
+      <div class="module-tags">
+        <span class="tag">LSTM</span>
+        <span class="tag">S.M.A.R.T.</span>
+        <span class="tag">PyTorch</span>
+        <span class="tag">ONNX</span>
+      </div>
+      <div class="module-arrow">→</div>
+    </a>
+
+    <!-- Module 3 -->
+    <a href="/module/3" class="module-card m3" id="card3">
+      <div class="module-num">03 — SECURITY LAYER</div>
+      <div class="module-icon">🔐</div>
+      <h3 class="module-title">Distributed Security Layer</h3>
+      <p class="module-desc">Military-grade AES-256-GCM encryption combined with Shamir's Secret Sharing distributes data shards across IPFS nodes — no single point of failure.</p>
+      <div class="module-tags">
+        <span class="tag">AES-256</span>
+        <span class="tag">Shamir SSS</span>
+        <span class="tag">IPFS</span>
+        <span class="tag">K-of-N</span>
+      </div>
+      <div class="module-arrow">→</div>
+    </a>
+
+    <!-- Module 4 -->
+    <a href="/module/4" class="module-card m4" id="card4">
+      <div class="module-num">04 — POWER CONTROLLER</div>
+      <div class="module-icon">⚡</div>
+      <h3 class="module-title">Adaptive Power Controller</h3>
+      <p class="module-desc">Workload consolidation buffers writes in RAM, flushing in smart batches to maximize Deep Sleep duration — saving up to 70% power versus reactive storage.</p>
+      <div class="module-tags">
+        <span class="tag">Batching</span>
+        <span class="tag">Deep Sleep</span>
+        <span class="tag">4MB Buffer</span>
+        <span class="tag">MQTT</span>
+      </div>
+      <div class="module-arrow">→</div>
+    </a>
+
+  </div>
+</section>
+
+<!-- Tech -->
+<section class="tech-section" id="tech">
+  <div class="section-label">Technology Stack</div>
+  <h2 class="section-title">Built for <em>the edge</em></h2>
+
+  <div class="tech-grid">
+    <div class="tech-card reveal">
+      <div class="tech-card-icon">🎯</div>
+      <div class="tech-card-title">YOLOv8 Nano — Real-time Detection</div>
+      <div class="tech-card-desc">Runs at 35fps on edge hardware with INT8 quantization, classifying frames in under 5ms per inference.</div>
+    </div>
+    <div class="tech-card reveal">
+      <div class="tech-card-icon">🧬</div>
+      <div class="tech-card-title">LSTM Network — 89.3% Accuracy</div>
+      <div class="tech-card-desc">3-layer PyTorch LSTM trained on 700K drive samples from NASA and Backblaze telemetry datasets.</div>
+    </div>
+    <div class="tech-card reveal">
+      <div class="tech-card-icon">🔑</div>
+      <div class="tech-card-title">Shamir's Secret Sharing</div>
+      <div class="tech-card-desc">K-of-N threshold scheme over Mersenne prime p=2¹²⁷-1. Information-theoretically secure with Lagrange interpolation.</div>
+    </div>
+    <div class="tech-card reveal">
+      <div class="tech-card-icon">💾</div>
+      <div class="tech-card-title">Write Buffer — 4MB / 500ms</div>
+      <div class="tech-card-desc">Configurable RAM buffer consolidates small writes into sequential bursts, reducing wake-up events by 90%.</div>
+    </div>
+    <div class="tech-card reveal">
+      <div class="tech-card-icon">🌐</div>
+      <div class="tech-card-title">IPFS Distributed Storage</div>
+      <div class="tech-card-desc">Content-addressed shards distributed across federated nodes — no cloud dependency required.</div>
+    </div>
+    <div class="tech-card reveal">
+      <div class="tech-card-icon">📡</div>
+      <div class="tech-card-title">MQTT Fleet Management</div>
+      <div class="tech-card-desc">Real-time alerts and telemetry streamed to fleet management dashboards via lightweight MQTT protocol.</div>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="footer">
+    <div>
+      <div class="footer-logo">AURA<span>STORAGE</span></div>
+      <div style="font-size:0.75rem;color:var(--muted);margin-top:0.4rem;">"Storage that Learns, Adapts, and Extends"</div>
+    </div>
+    <div class="footer-meta">
+      <div>© 2025 Team AURA STORAGE</div>
+      <div>PSG Institute of Technology · Cerebrum 2025 Finals · Partner: SanDisk</div>
+    </div>
+  </div>
+</footer>
+
+<script src="/static/js/global.js"></script>
+<script>
+// Mouse-follow gradient on module cards
+document.querySelectorAll('.module-card').forEach(card => {
+  card.addEventListener('mousemove', e => {
+    const r = card.getBoundingClientRect();
+    const x = ((e.clientX - r.left) / r.width * 100).toFixed(1);
+    const y = ((e.clientY - r.top) / r.height * 100).toFixed(1);
+    card.style.setProperty('--mx', x + '%');
+    card.style.setProperty('--my', y + '%');
+  });
+});
+
+// Scroll reveal
+const revealObserver = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) { e.target.classList.add('revealed'); revealObserver.unobserve(e.target); }
+  });
+}, { threshold: 0.15 });
+document.querySelectorAll('.reveal, .module-card, .tech-card').forEach(el => revealObserver.observe(el));
+
+// Animate stats counter
+function animateCounter(el, target, suffix = '') {
+  let start = 0;
+  const step = target / 60;
+  const timer = setInterval(() => {
+    start = Math.min(start + step, target);
+    el.textContent = Number.isInteger(target) ? Math.floor(start) + suffix : start.toFixed(1) + suffix;
+    if (start >= target) clearInterval(timer);
+  }, 16);
+}
+const statsObserver = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      document.querySelectorAll('.stat-num').forEach(el => {
+        const full = el.textContent;
+        const num = parseFloat(full);
+        const suf = full.replace(/[\d.]/g, '');
+        const span = el.querySelector('span');
+        el.textContent = '';
+        const spanCopy = document.createElement('span');
+        spanCopy.textContent = suf;
+        animateCounter(el, num);
+        setTimeout(() => el.appendChild(spanCopy), 800);
+      });
+      statsObserver.disconnect();
+    }
+  });
+}, { threshold: 0.5 });
+statsObserver.observe(document.querySelector('.stats-bar'));
+</script>
+</body>
+</html>

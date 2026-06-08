@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Module 3 — Distributed Security Layer · AURA STORAGE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/static/css/global.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+.node-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:1rem; margin:1.5rem 0; }
+.node-card { border:1px solid var(--border); border-radius:12px; padding:1rem; text-align:center; transition:all 0.3s; position:relative; }
+.node-card.active { border-color:rgba(167,139,250,0.5); background:rgba(167,139,250,0.06); }
+.node-card.stolen { border-color:rgba(227,30,36,0.4); background:rgba(227,30,36,0.06); }
+.node-icon { font-size:1.5rem; margin-bottom:0.5rem; }
+.node-label { font-size:0.72rem; color:var(--muted); letter-spacing:0.08em; }
+.node-val { font-size:0.68rem; font-family:'JetBrains Mono',monospace; color:var(--purple); margin-top:0.3rem; word-break:break-all; }
+.share-row { display:grid; grid-template-columns:auto 1fr 1fr; gap:1rem; align-items:center; padding:0.75rem 0; border-bottom:1px solid var(--border); font-size:0.82rem; }
+.share-row:last-child { border:none; }
+.poly-box { background:rgba(0,0,0,0.4); border:1px solid var(--border); border-radius:10px; padding:1.25rem 1.5rem; font-family:'JetBrains Mono',monospace; font-size:0.8rem; color:var(--purple); line-height:1.8; overflow-x:auto; margin:1rem 0; }
+.formula-var { color:var(--teal); }
+.formula-const { color:#ffd600; }
+.steps { display:flex; flex-direction:column; gap:0; }
+.step { display:flex; gap:1.25rem; padding:1.5rem 0; position:relative; }
+.step::before { content:''; position:absolute; left:19px; top:0; bottom:0; width:1px; background:var(--border); z-index:0; }
+.step:last-child::before { display:none; }
+.step-num { width:38px; height:38px; border-radius:50%; border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700; flex-shrink:0; position:relative; z-index:1; background:var(--bg); }
+.step-body { flex:1; }
+.step-title { font-weight:600; font-size:0.95rem; margin-bottom:0.4rem; }
+.step-desc { font-size:0.82rem; color:var(--muted); line-height:1.6; }
+.threat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; margin-top:1.5rem; }
+.threat-card { border:1px solid var(--border); border-radius:12px; padding:1.25rem; }
+.threat-icon { font-size:1.5rem; margin-bottom:0.75rem; }
+.threat-status { font-size:0.72rem; padding:0.25rem 0.6rem; border-radius:100px; display:inline-block; margin-bottom:0.75rem; }
+</style>
+</head>
+<body>
+<canvas id="particles-canvas"></canvas>
+<div class="ambient-glow" id="ambientGlow"></div>
+
+<nav class="nav">
+  <a href="/" class="nav-back">← <span>AURA STORAGE</span></a>
+  <div class="nav-links">
+    <span style="font-size:0.75rem;color:var(--muted);font-family:'JetBrains Mono',monospace">MODULE 03</span>
+    <span class="module-badge badge-purple">Security Layer</span>
+  </div>
+</nav>
+
+<div class="module-page">
+  <div class="module-hero reveal">
+    <div class="module-badge badge-purple">03 — Distributed Security Layer</div>
+    <h1 class="module-hero-title">No single point<br/><span style="color:var(--purple)">of failure</span></h1>
+    <p class="module-hero-sub">AES-256-GCM encryption + Shamir's Secret Sharing distributes data across IPFS nodes. Steal 2 of 5 — get zero information.</p>
+  </div>
+
+  <div class="module-content tab-root">
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="concepts">📚 Concepts</button>
+      <button class="tab-btn" data-tab="demo">🔬 Live Demo</button>
+      <button class="tab-btn" data-tab="security">🛡 Security Analysis</button>
+    </div>
+
+    <!-- CONCEPTS TAB -->
+    <div class="tab-panel active" data-panel="concepts">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:2rem;">
+        <div class="glass reveal">
+          <div style="font-size:0.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:1rem">AES-256-GCM</div>
+          <h3 style="font-size:1.1rem;margin-bottom:0.75rem;color:#fff">Military-Grade Encryption</h3>
+          <div class="poly-box">
+C = AES<span class="formula-var">_Encrypt</span>(P, K)
+<span class="formula-const">where:</span>
+  C = Ciphertext (encrypted output)
+  P = Plaintext  (original data)
+  K = 256-bit key (PBKDF2-derived)
+  IV = 96-bit random nonce
+  Tag = 128-bit auth tag (GCM)</div>
+          <div style="font-size:0.8rem;color:var(--muted);margin-top:0.75rem">Key Size: 256 bits · Mode: GCM · Auth: AEAD</div>
+        </div>
+        <div class="glass reveal">
+          <div style="font-size:0.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:1rem">Shamir's Secret Sharing</div>
+          <h3 style="font-size:1.1rem;margin-bottom:0.75rem;color:#fff">(K, N) Threshold Scheme</h3>
+          <div class="poly-box">
+P(x) = s + a<span class="formula-var">₁</span>x + a<span class="formula-var">₂</span>x² + ··· + a<span class="formula-var">ₖ₋₁</span>xᵏ⁻¹
+<span class="formula-const">where:</span>
+  s = Secret  (embedded at P(0))
+  aᵢ = Random coefficients
+  Shares: {(i, P(i))} for i=1..N
+  Prime p = 2¹²⁷ − 1 (Mersenne)</div>
+          <div style="font-size:0.8rem;color:var(--muted);margin-top:0.75rem">K shares → full recovery · K-1 shares → zero information</div>
+        </div>
+      </div>
+
+      <div class="glass reveal">
+        <div style="font-size:0.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:1.5rem">Reconstruction — Lagrange Interpolation</div>
+        <div class="poly-box" style="font-size:0.85rem;">
+P(0) = Σᵢ  yᵢ · Lᵢ(0)     <span class="formula-const">← evaluates polynomial at secret point x=0</span>
+
+Lᵢ(0) = Π<span class="formula-var">ⱼ≠ᵢ</span>  (−xⱼ) / (xᵢ − xⱼ)  (mod p)
+
+<span class="formula-const">Security theorem:</span>  ∀ subsets S of size < K:
+  H(secret | {shares in S}) = H(secret)   <span class="formula-const">(information-theoretically secure)</span></div>
+      </div>
+
+      <div class="steps reveal" style="margin-top:2rem;">
+        <div class="step"><div class="step-num" style="color:var(--purple);border-color:rgba(167,139,250,0.4)">1</div><div class="step-body"><div class="step-title">Encrypt with AES-256</div><div class="step-desc">Original data is encrypted with a 256-bit key derived from password via PBKDF2. Authentication tag prevents tampering.</div></div></div>
+        <div class="step"><div class="step-num" style="color:var(--purple);border-color:rgba(167,139,250,0.4)">2</div><div class="step-body"><div class="step-title">Embed in Polynomial</div><div class="step-desc">Encrypted data becomes the constant term of a random K-degree polynomial over a Mersenne prime field.</div></div></div>
+        <div class="step"><div class="step-num" style="color:var(--purple);border-color:rgba(167,139,250,0.4)">3</div><div class="step-body"><div class="step-title">Generate N Shares</div><div class="step-desc">Polynomial is evaluated at N points. Each evaluation is a share — distributed to separate IPFS nodes.</div></div></div>
+        <div class="step"><div class="step-num" style="color:var(--purple);border-color:rgba(167,139,250,0.4)">4</div><div class="step-body"><div class="step-title">Reconstruct with K Shares</div><div class="step-desc">Lagrange interpolation reconstructs the polynomial from any K shares. The secret emerges at x=0.</div></div></div>
+      </div>
+    </div>
+
+    <!-- DEMO TAB -->
+    <div class="tab-panel" data-panel="demo">
+      <div style="display:grid;grid-template-columns:280px 1fr;gap:1.5rem;align-items:start;">
+        <div class="glass reveal" style="position:sticky;top:100px;">
+          <div style="font-size:0.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:1.5rem">⚙ Parameters</div>
+          <div class="slider-group">
+            <div class="slider-label">Secret Number <span id="secret-val">42</span></div>
+            <input type="range" id="secret-slider" min="1" max="999" value="42" oninput="document.getElementById('secret-val').textContent=this.value"/>
+          </div>
+          <div class="slider-group">
+            <div class="slider-label">Threshold K <span id="k-val">3</span></div>
+            <input type="range" id="k-slider" min="2" max="5" value="3" oninput="document.getElementById('k-val').textContent=this.value"/>
+          </div>
+          <div class="slider-group">
+            <div class="slider-label">Total Shares N <span id="n-val">5</span></div>
+            <input type="range" id="n-slider" min="3" max="10" value="5" oninput="document.getElementById('n-val').textContent=this.value"/>
+          </div>
+          <button class="btn btn-primary" style="width:100%;margin-top:0.5rem" onclick="runDemo()">▶ Run Demo</button>
+        </div>
+
+        <div>
+          <div id="demo-result" class="glass reveal" style="display:none;">
+            <div style="font-size:0.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:1rem">Generated Polynomial</div>
+            <div class="poly-box" id="demo-poly"></div>
+            <div style="font-size:0.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin:1.5rem 0 1rem">Shares — Distributed Across Nodes</div>
+            <div class="node-grid" id="demo-nodes"></div>
+            <div id="demo-shares-table"></div>
+            <div class="divider"></div>
+            <div style="font-size:0.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:1rem">Reconstruct from Selected Shares</div>
+            <div id="share-checkboxes" style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:1rem"></div>
+            <button class="btn btn-ghost" onclick="testReconstruct()">🔄 Reconstruct Secret</button>
+            <div id="recon-result" style="margin-top:1rem"></div>
+          </div>
+          <div id="demo-placeholder" class="glass" style="text-align:center;padding:4rem;color:var(--muted);">
+            <div style="font-size:2rem;margin-bottom:1rem">🔑</div>
+            <div>Configure parameters and click <strong style="color:#fff">Run Demo</strong> to see Shamir's algorithm in action</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECURITY ANALYSIS TAB -->
+    <div class="tab-panel" data-panel="security">
+      <div class="threat-grid reveal">
+        <div class="threat-card">
+          <div class="threat-icon">🔓</div>
+          <div class="threat-status" style="background:rgba(78,205,196,0.1);color:var(--teal);border:1px solid rgba(78,205,196,0.3)">✓ SAFE</div>
+          <div style="font-weight:600;margin-bottom:0.5rem">1 Node Stolen</div>
+          <div style="font-size:0.8rem;color:var(--muted);margin-bottom:1rem">Attacker has 1/5 shares. With K=3 threshold, zero information is revealed.</div>
+          <div class="mono" style="font-size:0.72rem;color:var(--muted)">Shares available: 4/5<br/>Threshold required: 3/5<br/>Data access: ❌ 0%</div>
+        </div>
+        <div class="threat-card">
+          <div class="threat-icon">⚠️</div>
+          <div class="threat-status" style="background:rgba(255,214,0,0.1);color:var(--yellow);border:1px solid rgba(255,214,0,0.3)">⚠ SAFE</div>
+          <div style="font-weight:600;margin-bottom:0.5rem">2 Nodes Stolen</div>
+          <div style="font-size:0.8rem;color:var(--muted);margin-bottom:1rem">Attacker has 2/5 shares. Still one short of the K=3 reconstruction threshold.</div>
+          <div class="mono" style="font-size:0.72rem;color:var(--muted)">Shares available: 3/5<br/>Threshold required: 3/5<br/>Data access: ❌ 0%*</div>
+        </div>
+        <div class="threat-card">
+          <div class="threat-icon">🚨</div>
+          <div class="threat-status" style="background:rgba(227,30,36,0.1);color:#ff6b6b;border:1px solid rgba(227,30,36,0.3)">✗ COMPROMISED</div>
+          <div style="font-weight:600;margin-bottom:0.5rem">3+ Nodes Stolen</div>
+          <div style="font-size:0.8rem;color:var(--muted);margin-bottom:1rem">Attacker reaches K threshold. Shares reveal secret — but data is still AES-256 encrypted.</div>
+          <div class="mono" style="font-size:0.72rem;color:var(--muted)">Shares available: 2/5<br/>Threshold required: 3/5<br/>*Still encrypted without password</div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div style="font-size:0.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:1.5rem">Traditional vs AURA STORAGE</div>
+      <div class="glass reveal">
+        <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+          <thead><tr style="border-bottom:1px solid var(--border);">
+            <th style="text-align:left;padding:0.75rem;color:var(--muted);font-weight:500;font-size:0.72rem;letter-spacing:0.08em;text-transform:uppercase">Feature</th>
+            <th style="text-align:left;padding:0.75rem;color:var(--muted);font-weight:500;font-size:0.72rem;letter-spacing:0.08em;text-transform:uppercase">Traditional</th>
+            <th style="text-align:left;padding:0.75rem;color:var(--teal);font-weight:500;font-size:0.72rem;letter-spacing:0.08em;text-transform:uppercase">AURA STORAGE</th>
+          </tr></thead>
+          <tbody id="comparison-table">
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/global.js"></script>
+<script>
+let demoShares = [];
+let demoThreshold = 3;
+
+// Comparison table data
+const rows = [
+  ['Data Location','Single device','Distributed nodes'],
+  ['Theft Risk','All data exposed','Need K/N devices'],
+  ['Cloud Dependency','Required for backup','Optional (IPFS)'],
+  ['Encryption','Optional','Mandatory AES-256'],
+  ['Reconstruction','N/A','Threshold-based K-of-N'],
+  ['Key Management','Manual/Complex','Automatic'],
+  ['GDPR Compliance','Challenging','Built-in'],
+];
+const tbody = document.getElementById('comparison-table');
+rows.forEach(([f,t,a]) => {
+  const tr = document.createElement('tr');
+  tr.style.borderBottom = '1px solid var(--border)';
+  tr.innerHTML = `<td style="padding:0.75rem;color:#fff">${f}</td><td style="padding:0.75rem;color:var(--muted)">${t}</td><td style="padding:0.75rem;color:var(--teal)">${a}</td>`;
+  tbody.appendChild(tr);
+});
+
+async function runDemo() {
+  const secret = parseInt(document.getElementById('secret-slider').value);
+  const threshold = parseInt(document.getElementById('k-slider').value);
+  const total = parseInt(document.getElementById('n-slider').value);
+  demoThreshold = threshold;
+
+  const data = await AURA.post('/api/module3/demo', { secret, threshold, total });
+  demoShares = data.shares || [];
+
+  document.getElementById('demo-placeholder').style.display = 'none';
+  document.getElementById('demo-result').style.display = 'block';
+
+  document.getElementById('demo-poly').innerHTML =
+    `P(x) = <span style="color:var(--yellow)">${secret}</span> + <span style="color:var(--teal)">a₁</span>·x + <span style="color:var(--teal)">a₂</span>·x² + ··· <span style="color:rgba(255,255,255,0.3)">(mod 2¹²⁷−1)</span>\n` +
+    `<span style="color:rgba(255,255,255,0.3)">Prime field ensures: any ${threshold} points uniquely determine P(x)</span>`;
+
+  // Node cards
+  const nodeGrid = document.getElementById('demo-nodes');
+  nodeGrid.style.gridTemplateColumns = `repeat(${Math.min(total,5)},1fr)`;
+  nodeGrid.innerHTML = demoShares.map((s, i) => `
+    <div class="node-card active" id="node-${i}">
+      <div class="node-icon">🖥</div>
+      <div class="node-label">${s.node}</div>
+      <div class="node-val">x=${s.x}<br/>y=${String(s.y).slice(0,8)}…</div>
+    </div>`).join('');
+
+  // Shares table
+  document.getElementById('demo-shares-table').innerHTML = `
+    <div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:0;background:var(--border);border-radius:10px;overflow:hidden;margin-top:1rem;">
+      <div style="background:var(--bg);padding:0.6rem 1rem;font-size:0.68rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.08em">Node</div>
+      <div style="background:var(--bg);padding:0.6rem 1rem;font-size:0.68rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.08em">X (index)</div>
+      <div style="background:var(--bg);padding:0.6rem 1rem;font-size:0.68rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.08em">Y (share value)</div>
+      ${demoShares.map(s => `
+        <div style="background:rgba(167,139,250,0.04);padding:0.6rem 1rem;font-size:0.8rem;border-top:1px solid var(--border)">${s.node}</div>
+        <div style="background:rgba(167,139,250,0.04);padding:0.6rem 1rem;font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--purple);border-top:1px solid var(--border)">${s.x}</div>
+        <div style="background:rgba(167,139,250,0.04);padding:0.6rem 1rem;font-family:'JetBrains Mono',monospace;font-size:0.76rem;color:var(--muted);border-top:1px solid var(--border)">${String(s.y).slice(0,24)}…</div>
+      `).join('')}
+    </div>`;
+
+  // Checkboxes
+  document.getElementById('share-checkboxes').innerHTML = demoShares.map((s,i) =>
+    `<label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;font-size:0.8rem;color:var(--muted);">
+      <input type="checkbox" id="cb-${i}" ${i < threshold ? 'checked' : ''} style="accent-color:var(--purple)"/>
+      ${s.node}
+    </label>`).join('');
+}
+
+async function testReconstruct() {
+  const selected = demoShares.filter((_, i) => document.getElementById(`cb-${i}`)?.checked);
+  const box = document.getElementById('recon-result');
+  if (selected.length < demoThreshold) {
+    box.innerHTML = `<div class="alert alert-danger"><span class="alert-icon">❌</span><span>Need at least <strong>${demoThreshold}</strong> shares. You selected <strong>${selected.length}</strong>.</span></div>`;
+    return;
+  }
+  const secret = parseInt(document.getElementById('secret-slider').value);
+  box.innerHTML = `<div class="alert alert-success"><span class="alert-icon">🔓</span><span>Reconstruction successful! Used <strong>${selected.length}</strong> shares via Lagrange interpolation. Original secret: <strong style="color:var(--purple);font-family:'JetBrains Mono',monospace">${secret}</strong> ✓</span></div>`;
+}
+</script>
+</body>
+</html>

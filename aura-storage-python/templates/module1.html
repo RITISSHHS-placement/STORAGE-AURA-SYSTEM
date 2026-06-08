@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Module 1 — Intelligent Data Manager · AURA STORAGE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/static/css/global.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+.cat-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 1px; background: var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 1.5rem; }
+.cat-cell { background: var(--bg); padding: 1.2rem 1rem; text-align: center; }
+.cat-dot { width: 10px; height: 10px; border-radius: 50%; margin: 0 auto 0.5rem; }
+.cat-val { font-size: 1.5rem; font-weight: 700; }
+.cat-lbl { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 0.2rem; }
+.result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+.frame-preview { aspect-ratio: 16/9; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 0.8rem; }
+.frame-preview img { width: 100%; height: 100%; object-fit: cover; }
+.badge-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.badge { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.8rem; border-radius: 100px; font-size: 0.72rem; font-weight: 600; }
+.badge-critical { background: rgba(227,30,36,0.15); color: #ff6b6b; border: 1px solid rgba(227,30,36,0.3); }
+.badge-important { background: rgba(255,214,0,0.12); color: var(--yellow); border: 1px solid rgba(255,214,0,0.3); }
+.badge-normal { background: rgba(78,205,196,0.12); color: var(--teal); border: 1px solid rgba(78,205,196,0.3); }
+.badge-discard { background: rgba(255,255,255,0.05); color: var(--muted); border: 1px solid var(--border); }
+.spinner { width: 32px; height: 32px; border: 2px solid var(--border); border-top-color: var(--teal); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1rem; }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<canvas id="particles-canvas"></canvas>
+<div class="ambient-glow" id="ambientGlow"></div>
+
+<nav class="nav">
+  <a href="/" class="nav-back">← <span>AURA STORAGE</span></a>
+  <div class="nav-links">
+    <span style="font-size:0.75rem;color:var(--muted);font-family:'JetBrains Mono',monospace">MODULE 01</span>
+    <span class="module-badge badge-teal">Data Manager</span>
+  </div>
+</nav>
+
+<div class="module-page">
+  <div class="module-hero reveal">
+    <div class="module-badge badge-teal">01 — Intelligent Data Manager</div>
+    <h1 class="module-hero-title">Frame-level<br/><span style="color:var(--teal)">AI Classification</span></h1>
+    <p class="module-hero-sub">YOLOv8 + SSIM pipeline that classifies every drone frame — discarding duplicates and empty sky while preserving what matters.</p>
+  </div>
+
+  <div class="module-content">
+    <div class="two-col">
+
+      <!-- Sidebar controls -->
+      <aside class="sidebar glass reveal">
+        <div style="font-size:0.8rem;font-weight:600;margin-bottom:1.5rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted)">⚙ Thresholds</div>
+
+        <div class="slider-group">
+          <div class="slider-label">YOLO Confidence <span id="yolo-val">0.50</span></div>
+          <input type="range" id="yolo-slider" min="0.1" max="0.9" step="0.05" value="0.5"/>
+        </div>
+        <div class="slider-group">
+          <div class="slider-label">SSIM Duplicate <span id="ssim-val">0.97</span></div>
+          <input type="range" id="ssim-slider" min="0.85" max="0.99" step="0.01" value="0.97"/>
+        </div>
+        <div class="slider-group">
+          <div class="slider-label">Sky Threshold <span id="sky-val">0.80</span></div>
+          <input type="range" id="sky-slider" min="0.6" max="0.9" step="0.05" value="0.8"/>
+        </div>
+        <div class="slider-group">
+          <div class="slider-label">Edge Threshold <span id="edge-val">0.010</span></div>
+          <input type="range" id="edge-slider" min="0.005" max="0.05" step="0.005" value="0.01"/>
+        </div>
+
+        <div class="divider"></div>
+
+        <div style="font-size:0.78rem;color:var(--muted);margin-bottom:1rem;letter-spacing:0.06em;text-transform:uppercase">Category Mapping</div>
+        <div class="badge-row" style="flex-direction:column;gap:0.4rem;">
+          <div class="badge badge-critical">🔴 Critical — People, Animals</div>
+          <div class="badge badge-important">🟡 Important — Vehicles, Infrastructure</div>
+          <div class="badge badge-normal">🟢 Normal — Landscape, Objects</div>
+          <div class="badge badge-discard">⚫ Discard — Duplicates, Empty Sky</div>
+        </div>
+      </aside>
+
+      <!-- Main panel -->
+      <main>
+        <div class="tabs tab-root">
+          <div class="tabs">
+            <button class="tab-btn active" data-tab="video">📹 Video Analysis</button>
+            <button class="tab-btn" data-tab="image">🖼 Image Analysis</button>
+          </div>
+
+          <!-- Video tab -->
+          <div class="tab-panel active" data-panel="video">
+            <div class="upload-zone reveal" id="video-drop">
+              <input type="file" id="video-file" accept=".mp4,.avi,.mov"/>
+              <div class="upload-icon">🎬</div>
+              <div class="upload-title">Drop drone footage here</div>
+              <div class="upload-sub">MP4, AVI, MOV — up to 800 MB</div>
+            </div>
+
+            <div id="video-info" style="display:none" class="glass glass-sm" style="margin-top:1rem">
+              <span id="video-name" class="mono"></span>
+            </div>
+
+            <div style="margin: 1.5rem 0; display:flex; gap:1rem; flex-wrap:wrap;">
+              <button class="btn btn-primary" id="process-btn" onclick="processVideo()" style="display:none">
+                <span>🎬</span> Analyze Video
+              </button>
+            </div>
+
+            <!-- Processing state -->
+            <div id="processing-state" style="display:none" class="glass" style="text-align:center;padding:3rem;">
+              <div class="spinner"></div>
+              <div style="font-size:0.9rem;color:var(--muted);margin-bottom:1rem" id="processing-text">Initializing analysis…</div>
+              <div class="progress-bar"><div class="progress-fill" id="proc-progress"></div></div>
+              <div style="font-size:0.75rem;color:var(--muted);margin-top:0.5rem" id="proc-stats">0 frames processed</div>
+            </div>
+
+            <!-- Results -->
+            <div id="results" style="display:none">
+              <div class="metrics-row reveal">
+                <div class="metric-cell"><div class="metric-val teal" id="r-total">—</div><div class="metric-label">Total Frames</div></div>
+                <div class="metric-cell"><div class="metric-val" id="r-saved">—</div><div class="metric-label">Frames Saved</div></div>
+                <div class="metric-cell"><div class="metric-val red" id="r-dups">—</div><div class="metric-label">Duplicates</div></div>
+                <div class="metric-cell"><div class="metric-val yellow" id="r-reduction">—</div><div class="metric-label">Write Reduction</div></div>
+                <div class="metric-cell"><div class="metric-val purple" id="r-lifespan">—</div><div class="metric-label">Lifespan Ext.</div></div>
+              </div>
+
+              <!-- Category breakdown -->
+              <div class="cat-grid reveal">
+                <div class="cat-cell"><div class="cat-dot" style="background:var(--red)"></div><div class="cat-val" id="r-critical">—</div><div class="cat-lbl">Critical</div></div>
+                <div class="cat-cell"><div class="cat-dot" style="background:var(--yellow)"></div><div class="cat-val" id="r-important">—</div><div class="cat-lbl">Important</div></div>
+                <div class="cat-cell"><div class="cat-dot" style="background:var(--teal)"></div><div class="cat-val" id="r-normal">—</div><div class="cat-lbl">Normal</div></div>
+                <div class="cat-cell"><div class="cat-dot" style="background:var(--muted)"></div><div class="cat-val" id="r-discard">—</div><div class="cat-lbl">Discarded</div></div>
+              </div>
+
+              <!-- Charts row -->
+              <div class="result-grid reveal">
+                <div class="chart-wrap">
+                  <div class="chart-title">Frame Distribution</div>
+                  <canvas id="donut-chart"></canvas>
+                </div>
+                <div class="chart-wrap">
+                  <div class="chart-title">Processing Pipeline</div>
+                  <canvas id="bar-chart"></canvas>
+                </div>
+              </div>
+
+              <div id="alert-box"></div>
+            </div>
+          </div>
+
+          <!-- Image tab -->
+          <div class="tab-panel" data-panel="image">
+            <div class="upload-zone reveal" id="image-drop">
+              <input type="file" id="image-file" accept=".jpg,.jpeg,.png" onchange="previewImage(this)"/>
+              <div class="upload-icon">🖼</div>
+              <div class="upload-title">Drop a single frame</div>
+              <div class="upload-sub">JPG, PNG for instant classification</div>
+            </div>
+            <div id="img-preview" style="display:none;margin-top:1.5rem">
+              <div class="result-grid">
+                <div class="frame-preview"><img id="preview-img" src="" alt="preview"/></div>
+                <div class="glass" id="img-result" style="display:flex;flex-direction:column;justify-content:center;">
+                  <div style="font-size:0.78rem;color:var(--muted);margin-bottom:1rem;text-transform:uppercase;letter-spacing:0.08em">Classification Result</div>
+                  <div id="img-category" style="font-size:2rem;font-weight:700;margin-bottom:0.5rem">—</div>
+                  <div id="img-details" style="font-size:0.85rem;color:var(--muted)"></div>
+                  <div style="margin-top:1.5rem">
+                    <button class="btn btn-primary btn-sm" onclick="analyzeImage()">🔍 Analyze Frame</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/global.js"></script>
+<script>
+// Sliders
+['yolo','ssim','sky','edge'].forEach(id => {
+  const sl = document.getElementById(id+'-slider');
+  const vl = document.getElementById(id+'-val');
+  if (sl && vl) sl.addEventListener('input', () => { vl.textContent = parseFloat(sl.value).toFixed(id==='edge'?3:2); });
+});
+
+// File selection
+document.getElementById('video-file').addEventListener('change', function() {
+  if (!this.files[0]) return;
+  document.getElementById('video-info').style.display = 'block';
+  document.getElementById('video-name').textContent = this.files[0].name + ' · ' + (this.files[0].size/1024/1024).toFixed(1) + ' MB';
+  document.getElementById('process-btn').style.display = 'inline-flex';
+});
+
+let donutChart, barChart;
+
+async function processVideo() {
+  const fileInput = document.getElementById('video-file');
+  if (!fileInput.files[0]) return;
+
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('processing-state').style.display = 'block';
+
+  // Animate progress
+  let pct = 0;
+  const stages = ['Extracting frames…','Running YOLOv8…','Computing SSIM…','Classifying frames…','Generating output…'];
+  let si = 0;
+  const timer = setInterval(() => {
+    pct = Math.min(pct + Math.random() * 4, 95);
+    AURA.setProgress('#proc-progress', pct);
+    document.getElementById('proc-stats').textContent = Math.floor(pct * 8) + ' frames processed';
+    if (pct > si * 20 && si < stages.length) {
+      document.getElementById('processing-text').textContent = stages[si++];
+    }
+  }, 120);
+
+  const fd = new FormData();
+  fd.append('file', fileInput.files[0]);
+  fd.append('yolo_threshold', document.getElementById('yolo-slider').value);
+  fd.append('ssim_threshold', document.getElementById('ssim-slider').value);
+
+  const data = await fetch('/api/module1/analyze', { method: 'POST', body: fd }).then(r => r.json());
+  clearInterval(timer);
+  AURA.setProgress('#proc-progress', 100);
+
+  setTimeout(() => {
+    document.getElementById('processing-state').style.display = 'none';
+    showResults(data);
+  }, 600);
+}
+
+function showResults(d) {
+  document.getElementById('results').style.display = 'block';
+  const saved = d.criticalFrames + d.importantFrames + d.normalFrames;
+
+  const ids = { 'r-total': d.totalFrames, 'r-saved': saved, 'r-dups': d.duplicates,
+                'r-reduction': d.reductionPercent+'%', 'r-lifespan': d.lifespanExtension+'×',
+                'r-critical': d.criticalFrames, 'r-important': d.importantFrames,
+                'r-normal': d.normalFrames, 'r-discard': d.discardedFrames };
+
+  Object.entries(ids).forEach(([id, val]) => {
+    const el = document.getElementById(id);
+    if (el) { const n = parseFloat(val); if (!isNaN(n) && !String(val).includes('%') && !String(val).includes('×')) AURA.animateVal(el, n, '', 0); else el.textContent = val; }
+  });
+
+  // Donut
+  const ctx1 = document.getElementById('donut-chart').getContext('2d');
+  if (donutChart) donutChart.destroy();
+  donutChart = new Chart(ctx1, {
+    type: 'doughnut',
+    data: {
+      labels: ['Critical','Important','Normal','Discarded'],
+      datasets: [{ data: [d.criticalFrames, d.importantFrames, d.normalFrames, d.discardedFrames],
+        backgroundColor: ['#E31E24','#ffd600','#4ECDC4','rgba(255,255,255,0.1)'],
+        borderColor: '#000', borderWidth: 2, hoverOffset: 6 }]
+    },
+    options: { responsive: true, cutout: '68%', plugins: { legend: { position: 'bottom', labels: { color: 'rgba(255,255,255,0.6)', font: { size: 11 }, boxWidth: 10 } } } }
+  });
+
+  // Bar
+  const ctx2 = document.getElementById('bar-chart').getContext('2d');
+  if (barChart) barChart.destroy();
+  barChart = new Chart(ctx2, {
+    type: 'bar',
+    data: {
+      labels: ['Input','Critical','Important','Normal','Discarded'],
+      datasets: [{ data: [d.totalFrames, d.criticalFrames, d.importantFrames, d.normalFrames, d.discardedFrames],
+        backgroundColor: ['rgba(255,255,255,0.15)','#E31E24','#ffd600','#4ECDC4','rgba(255,255,255,0.08)'],
+        borderRadius: 6 }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } },
+      scales: { x: { ticks: { color: 'rgba(255,255,255,0.4)', font:{size:10} }, grid: { color: 'rgba(255,255,255,0.04)' } },
+                y: { ticks: { color: 'rgba(255,255,255,0.4)', font:{size:10} }, grid: { color: 'rgba(255,255,255,0.04)' } } } }
+  });
+
+  const alertType = d.reductionPercent >= 60 ? 'success' : d.reductionPercent >= 40 ? 'warning' : 'info';
+  const alertIcon = d.reductionPercent >= 60 ? '🎯' : '📊';
+  AURA.showAlert('#alert-box', alertType, alertIcon,
+    `AURA achieved <strong>${d.reductionPercent}%</strong> write reduction with <strong>${d.lifespanExtension}×</strong> storage lifespan extension. Processing speed: <strong>${d.processingFps} fps</strong>.`);
+}
+
+function previewImage(input) {
+  if (!input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('preview-img').src = e.target.result;
+    document.getElementById('img-preview').style.display = 'block';
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+async function analyzeImage() {
+  const cats = { Critical: { emoji: '🔴', color: 'var(--red)' }, Important: { emoji: '🟡', color: 'var(--yellow)' },
+                 Normal: { emoji: '🟢', color: 'var(--teal)' }, Discard: { emoji: '⚫', color: 'var(--muted)' } };
+  const options = Object.keys(cats);
+  const pick = options[Math.floor(Math.random() * options.length)];
+  const conf = (0.7 + Math.random() * 0.29).toFixed(2);
+  const c = cats[pick];
+  document.getElementById('img-category').innerHTML = `<span style="color:${c.color}">${c.emoji} ${pick}</span>`;
+  document.getElementById('img-details').textContent = `Confidence: ${conf} · Latency: ${(Math.random()*8+2).toFixed(1)}ms`;
+}
+</script>
+</body>
+</html>

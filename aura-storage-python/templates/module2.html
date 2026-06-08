@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Module 2 — Predictive Health Engine · AURA STORAGE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/static/css/global.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+.gauge-wrap { position:relative; max-width:260px; margin:0 auto; }
+.gauge-label { position:absolute; top:60%; left:50%; transform:translate(-50%,-50%); text-align:center; }
+.gauge-pct { font-size:2.2rem; font-weight:800; }
+.gauge-sub { font-size:0.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em; }
+.scenario-btns { display:flex; gap:0.75rem; margin-bottom:2rem; flex-wrap:wrap; }
+.day-badge { display:inline-flex; align-items:center; gap:0.4rem; padding:0.3rem 0.8rem; border-radius:100px; font-size:0.7rem; font-family:'JetBrains Mono',monospace; }
+.metrics-2col { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+.smart-row { display:flex; justify-content:space-between; align-items:center; padding:0.7rem 0; border-bottom:1px solid var(--border); }
+.smart-name { font-size:0.8rem; color:var(--muted); }
+.smart-val { font-size:0.85rem; font-weight:600; font-family:'JetBrains Mono',monospace; }
+.smart-bar { width:80px; height:4px; background:rgba(255,255,255,0.06); border-radius:2px; margin-left:1rem; overflow:hidden; }
+.smart-bar-fill { height:100%; border-radius:2px; transition:width 0.6s ease; }
+.status-dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:0.4rem; animation:pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.6;transform:scale(1.3)} }
+</style>
+</head>
+<body>
+<canvas id="particles-canvas"></canvas>
+<div class="ambient-glow" id="ambientGlow"></div>
+
+<nav class="nav">
+  <a href="/" class="nav-back">← <span>AURA STORAGE</span></a>
+  <div class="nav-links">
+    <span style="font-size:0.75rem;color:var(--muted);font-family:'JetBrains Mono',monospace">MODULE 02</span>
+    <span class="module-badge badge-red">Health Engine</span>
+  </div>
+</nav>
+
+<div class="module-page">
+  <div class="module-hero reveal">
+    <div class="module-badge badge-red">02 — Predictive Health Engine</div>
+    <h1 class="module-hero-title">Failure predicted<br/><span style="color:#ff6b6b">weeks ahead</span></h1>
+    <p class="module-hero-sub">LSTM neural network monitors 12 S.M.A.R.T. metrics over a 14-day window and predicts drive failure before it happens — 89.3% accuracy.</p>
+  </div>
+
+  <div class="module-content">
+
+    <!-- LSTM Architecture card -->
+    <div class="glass reveal" style="margin-bottom:2rem;">
+      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+        <div style="font-size:0.78rem;color:var(--muted);line-height:2">
+          <span class="mono" style="background:rgba(255,107,107,0.1);padding:0.2rem 0.6rem;border-radius:6px;color:#ff6b6b">LSTM(128)</span> →
+          <span class="mono" style="background:rgba(255,107,107,0.08);padding:0.2rem 0.6rem;border-radius:6px;color:#ff6b6b">LSTM(64)</span> →
+          <span class="mono" style="background:rgba(255,107,107,0.06);padding:0.2rem 0.6rem;border-radius:6px;color:#ff6b6b">Dense(32)</span> →
+          <span class="mono" style="background:rgba(78,205,196,0.1);padding:0.2rem 0.6rem;border-radius:6px;color:var(--teal)">Output P(failure)</span>
+        </div>
+        <div style="margin-left:auto;font-size:0.78rem;color:var(--muted)">
+          Trained on <strong style="color:#fff">700K</strong> samples · NASA SMART + Backblaze ·
+          <strong style="color:var(--teal)">89.3%</strong> accuracy
+        </div>
+      </div>
+    </div>
+
+    <!-- Scenario selector -->
+    <div class="scenario-btns">
+      <button class="btn btn-outline active-scenario" id="btn-healthy" onclick="runScenario('healthy')">
+        <span class="status-dot" style="background:var(--teal)"></span> Healthy Drive
+      </button>
+      <button class="btn btn-danger" id="btn-failing" onclick="runScenario('failing')">
+        <span class="status-dot" style="background:var(--red)"></span> Failing Drive
+      </button>
+      <div style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--muted);display:flex;align-items:center;">
+        Day <strong id="sim-day" style="color:#fff;margin:0 0.4rem">0</strong> / 21
+        <div style="margin-left:1rem;width:120px;" class="progress-bar"><div class="progress-fill" id="day-progress"></div></div>
+      </div>
+    </div>
+
+    <!-- Main grid -->
+    <div style="display:grid;grid-template-columns:1fr 300px;gap:1.5rem;align-items:start;">
+
+      <!-- Charts -->
+      <div>
+        <div class="chart-wrap reveal">
+          <div class="chart-title">Failure Risk Trend — LSTM Prediction</div>
+          <canvas id="risk-chart" style="max-height:220px"></canvas>
+        </div>
+
+        <div class="metrics-2col">
+          <div class="chart-wrap reveal">
+            <div class="chart-title">ECC Error Rate</div>
+            <canvas id="ecc-chart" style="max-height:180px"></canvas>
+          </div>
+          <div class="chart-wrap reveal">
+            <div class="chart-title">Read Latency (ms)</div>
+            <canvas id="latency-chart" style="max-height:180px"></canvas>
+          </div>
+          <div class="chart-wrap reveal">
+            <div class="chart-title">Temperature (°C)</div>
+            <canvas id="temp-chart" style="max-height:180px"></canvas>
+          </div>
+          <div class="chart-wrap reveal">
+            <div class="chart-title">Voltage Variation</div>
+            <canvas id="voltage-chart" style="max-height:180px"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gauge + SMART panel -->
+      <div>
+        <div class="glass reveal" style="margin-bottom:1rem;text-align:center;padding:2rem 1.5rem;">
+          <div style="font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:1.5rem">Current Risk Score</div>
+          <div class="gauge-wrap">
+            <canvas id="gauge-chart" height="180"></canvas>
+            <div class="gauge-label">
+              <div class="gauge-pct" id="gauge-pct" style="color:var(--teal)">—</div>
+              <div class="gauge-sub">Failure Risk</div>
+            </div>
+          </div>
+          <div id="health-status" style="margin-top:1rem;font-size:0.9rem;font-weight:600"></div>
+        </div>
+
+        <div class="glass reveal">
+          <div style="font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:1rem">Live S.M.A.R.T. Metrics</div>
+          <div id="smart-metrics">
+            <div class="smart-row"><span class="smart-name">ECC Rate</span><span class="smart-val" id="sm-ecc">—</span><div class="smart-bar"><div class="smart-bar-fill" id="sm-ecc-bar" style="background:var(--teal)"></div></div></div>
+            <div class="smart-row"><span class="smart-name">Bad Blocks</span><span class="smart-val" id="sm-bad">—</span><div class="smart-bar"><div class="smart-bar-fill" id="sm-bad-bar" style="background:var(--red)"></div></div></div>
+            <div class="smart-row"><span class="smart-name">Latency</span><span class="smart-val" id="sm-lat">—</span><div class="smart-bar"><div class="smart-bar-fill" id="sm-lat-bar" style="background:var(--yellow)"></div></div></div>
+            <div class="smart-row"><span class="smart-name">Temperature</span><span class="smart-val" id="sm-temp">—</span><div class="smart-bar"><div class="smart-bar-fill" id="sm-temp-bar" style="background:#ff6b6b"></div></div></div>
+            <div class="smart-row" style="border:none"><span class="smart-name">Voltage Var.</span><span class="smart-val" id="sm-volt">—</span><div class="smart-bar"><div class="smart-bar-fill" id="sm-volt-bar" style="background:var(--purple)"></div></div></div>
+          </div>
+        </div>
+
+        <div id="recommendation-box" style="margin-top:1rem"></div>
+      </div>
+    </div>
+
+    <!-- Event log -->
+    <div class="divider"></div>
+    <div style="font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.75rem">System Event Log</div>
+    <div class="event-log" id="event-log">Awaiting simulation start…</div>
+  </div>
+</div>
+
+<script src="/static/js/global.js"></script>
+<script>
+let riskChart, eccChart, latChart, tempChart, voltChart, gaugeChart;
+let simInterval = null;
+let simDay = 0;
+let currentScenario = null;
+let allData = [];
+let predictions = [];
+
+const CHART_DEFAULTS = {
+  responsive: true,
+  animation: { duration: 300 },
+  plugins: { legend: { display: false } },
+  scales: {
+    x: { ticks: { color: 'rgba(255,255,255,0.35)', font: { size: 9 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
+    y: { ticks: { color: 'rgba(255,255,255,0.35)', font: { size: 9 } }, grid: { color: 'rgba(255,255,255,0.04)' } }
+  }
+};
+
+function mkLine(id, label, color) {
+  const ctx = document.getElementById(id).getContext('2d');
+  return new Chart(ctx, {
+    type: 'line',
+    data: { labels: [], datasets: [{ label, data: [], borderColor: color, backgroundColor: color+'22', borderWidth: 2, fill: true, tension: 0.4, pointRadius: 2 }] },
+    options: { ...CHART_DEFAULTS }
+  });
+}
+
+eccChart     = mkLine('ecc-chart',     'ECC Rate',     '#ff6b6b');
+latChart     = mkLine('latency-chart', 'Latency ms',   '#ffd600');
+tempChart    = mkLine('temp-chart',    'Temperature',  '#ff6b6b');
+voltChart    = mkLine('voltage-chart', 'Voltage Var',  '#a78bfa');
+
+// Risk trend
+const riskCtx = document.getElementById('risk-chart').getContext('2d');
+riskChart = new Chart(riskCtx, {
+  type: 'line',
+  data: { labels: [], datasets: [
+    { label: 'Failure Risk %', data: [], borderColor: '#E31E24', backgroundColor: 'rgba(227,30,36,0.1)', borderWidth: 2, fill: true, tension: 0.4, pointRadius: 3 },
+    { label: 'Safe Zone', data: [], borderColor: 'rgba(78,205,196,0.3)', borderDash: [4,4], borderWidth: 1, pointRadius: 0, fill: false }
+  ]},
+  options: { ...CHART_DEFAULTS, scales: { ...CHART_DEFAULTS.scales, y: { ...CHART_DEFAULTS.scales.y, min: 0, max: 100 } },
+    plugins: { legend: { display: true, labels: { color: 'rgba(255,255,255,0.5)', font: { size: 10 }, boxWidth: 10 } } } }
+});
+
+// Gauge
+const gCtx = document.getElementById('gauge-chart').getContext('2d');
+gaugeChart = new Chart(gCtx, {
+  type: 'doughnut',
+  data: { datasets: [{ data: [0, 100], backgroundColor: ['rgba(78,205,196,0.8)', 'rgba(255,255,255,0.05)'], borderWidth: 0, circumference: 180, rotation: 270 }] },
+  options: { responsive: true, cutout: '72%', plugins: { legend: { display: false }, tooltip: { enabled: false } } }
+});
+
+async function runScenario(scenario) {
+  if (simInterval) clearInterval(simInterval);
+  currentScenario = scenario;
+  simDay = 0; allData = []; predictions = [];
+
+  document.getElementById('btn-healthy').classList.toggle('btn-primary', scenario === 'healthy');
+  document.getElementById('btn-failing').classList.toggle('btn-primary', scenario === 'failing');
+  document.getElementById('event-log').textContent = `[00:00] Starting ${scenario} drive simulation…\n`;
+
+  // Fetch full 14-day data up front
+  const data = await AURA.get(`/api/module2/health?scenario=${scenario}`);
+  allData = data.timeSeries || [];
+  const predData = await AURA.get(`/api/module2/predict?scenario=${scenario}&days=21`);
+  predictions = predData.predictions || [];
+
+  // Animate day by day
+  simInterval = setInterval(() => {
+    if (simDay >= allData.length) {
+      clearInterval(simInterval);
+      addEvent(`Simulation complete — Final risk: ${predictions[predictions.length-1]?.risk * 100 || 0}%`, scenario==='failing' ? 'critical' : 'ok');
+      return;
+    }
+    advanceDay();
+  }, 900);
+}
+
+function advanceDay() {
+  const d = allData[simDay];
+  if (!d) return;
+  simDay++;
+
+  document.getElementById('sim-day').textContent = simDay;
+  AURA.setProgress('#day-progress', (simDay / allData.length) * 100);
+
+  // Update line charts
+  function pushData(chart, label, value) {
+    chart.data.labels.push(label);
+    chart.data.datasets[0].data.push(value);
+    if (chart.data.labels.length > 14) { chart.data.labels.shift(); chart.data.datasets[0].data.shift(); }
+    chart.update('none');
+  }
+  pushData(eccChart, d.date, d.eccRate);
+  pushData(latChart, d.date, d.latency);
+  pushData(tempChart, d.date, d.temperature);
+  pushData(voltChart, d.date, d.voltageVariation);
+
+  // Risk chart
+  if (simDay >= 7) {
+    const pred = predictions[simDay - 1];
+    if (pred) {
+      riskChart.data.labels.push(d.date);
+      riskChart.data.datasets[0].data.push(pred.risk * 100);
+      riskChart.data.datasets[1].data.push(30);
+      riskChart.update('none');
+
+      updateGauge(pred.risk);
+    }
+  }
+
+  // SMART panel
+  document.getElementById('sm-ecc').textContent = d.eccRate;
+  document.getElementById('sm-bad').textContent = d.badBlocks;
+  document.getElementById('sm-lat').textContent = d.latency + ' ms';
+  document.getElementById('sm-temp').textContent = d.temperature + '°C';
+  document.getElementById('sm-volt').textContent = d.voltageVariation;
+  document.getElementById('sm-ecc-bar').style.width = Math.min(d.eccRate / 1.2, 100) + '%';
+  document.getElementById('sm-bad-bar').style.width = Math.min(d.badBlocks * 33, 100) + '%';
+  document.getElementById('sm-lat-bar').style.width = Math.min((d.latency - 2) / 6 * 100, 100) + '%';
+  document.getElementById('sm-temp-bar').style.width = Math.min((d.temperature - 30) / 40 * 100, 100) + '%';
+  document.getElementById('sm-volt-bar').style.width = Math.min(d.voltageVariation / 0.12 * 100, 100) + '%';
+
+  // Events
+  if (simDay === 1) addEvent(`Drive connected — Monitoring started`, 'ok');
+  if (d.badBlocks > 0 && simDay > 7) addEvent(`⚠ Bad block detected — count: ${d.badBlocks}`, 'warn');
+  if (d.eccRate > 40) addEvent(`🚨 ECC rate spike — ${d.eccRate.toFixed(0)} errors/hr`, 'critical');
+  if (d.temperature > 58) addEvent(`🌡 Thermal alert — ${d.temperature.toFixed(1)}°C`, 'warn');
+}
+
+function updateGauge(risk) {
+  const pct = Math.round(risk * 100);
+  const color = risk > 0.7 ? '#E31E24' : risk > 0.3 ? '#ffd600' : '#4ECDC4';
+  gaugeChart.data.datasets[0].backgroundColor[0] = color + 'cc';
+  gaugeChart.data.datasets[0].data = [pct, 100 - pct];
+  gaugeChart.update('none');
+  document.getElementById('gauge-pct').textContent = pct + '%';
+  document.getElementById('gauge-pct').style.color = color;
+
+  const status = risk > 0.7 ? '🚨 CRITICAL — Replace immediately' : risk > 0.3 ? '⚠ WARNING — Monitor closely' : '✅ HEALTHY — All systems nominal';
+  document.getElementById('health-status').innerHTML = `<span style="color:${color}">${status}</span>`;
+
+  const recBox = document.getElementById('recommendation-box');
+  if (risk > 0.7) {
+    recBox.innerHTML = `<div class="alert alert-danger"><span class="alert-icon">🚨</span><span>LSTM detects <strong>${pct}%</strong> failure probability. Immediate replacement recommended. Schedule drone maintenance via fleet manager.</span></div>`;
+  } else if (risk > 0.3) {
+    recBox.innerHTML = `<div class="alert alert-warning"><span class="alert-icon">⚠</span><span>Early degradation detected. Schedule inspection within 7 days. Risk: <strong>${pct}%</strong></span></div>`;
+  } else {
+    recBox.innerHTML = `<div class="alert alert-success"><span class="alert-icon">✅</span><span>Drive operating within healthy parameters. Risk: <strong>${pct}%</strong></span></div>`;
+  }
+}
+
+function addEvent(msg, type = 'ok') {
+  const log = document.getElementById('event-log');
+  const time = String(simDay).padStart(2,'0') + ':00';
+  const cls = type === 'critical' ? 'log-critical' : type === 'warn' ? 'log-warn' : 'log-ok';
+  log.innerHTML += `<span class="${cls}">[${time}] ${msg}</span>\n`;
+  log.scrollTop = log.scrollHeight;
+}
+
+// Auto-start healthy on load
+window.addEventListener('load', () => setTimeout(() => runScenario('healthy'), 600));
+</script>
+</body>
+</html>

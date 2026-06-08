@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Module 4 — Adaptive Power Controller · AURA STORAGE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/static/css/global.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+.power-state-badge { display:inline-flex; align-items:center; gap:0.5rem; padding:0.5rem 1rem; border-radius:100px; font-size:0.8rem; font-weight:600; transition:all 0.4s; }
+.write-btns { display:grid; grid-template-columns:repeat(2,1fr); gap:0.75rem; margin-bottom:1.5rem; }
+.write-btn { padding:1rem; border:1px solid var(--border); border-radius:12px; background:rgba(255,255,255,0.03); cursor:pointer; text-align:left; transition:all 0.25s; font-family:inherit; color:#fff; }
+.write-btn:hover { border-color:var(--yellow); background:rgba(255,214,0,0.04); transform:translateY(-2px); }
+.write-btn .wb-icon { font-size:1.4rem; margin-bottom:0.5rem; }
+.write-btn .wb-title { font-size:0.85rem; font-weight:600; margin-bottom:0.2rem; }
+.write-btn .wb-sub { font-size:0.72rem; color:var(--muted); }
+.state-machine { display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; margin:1rem 0; }
+.state-node { padding:0.4rem 1rem; border-radius:100px; font-size:0.75rem; font-weight:600; border:1px solid transparent; transition:all 0.3s; }
+.state-arrow { color:var(--muted); font-size:0.8rem; }
+.buffer-visual { position:relative; height:48px; background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:10px; overflow:hidden; margin:0.75rem 0; }
+.buffer-fill { height:100%; border-radius:10px; transition:width 0.5s cubic-bezier(0.34,1.56,0.64,1); display:flex; align-items:center; padding-left:0.75rem; font-size:0.72rem; font-weight:600; white-space:nowrap; }
+.compare-grid { display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; }
+</style>
+</head>
+<body>
+<canvas id="particles-canvas"></canvas>
+<div class="ambient-glow" id="ambientGlow"></div>
+
+<nav class="nav">
+  <a href="/" class="nav-back">← <span>AURA STORAGE</span></a>
+  <div class="nav-links">
+    <span style="font-size:0.75rem;color:var(--muted);font-family:'JetBrains Mono',monospace">MODULE 04</span>
+    <span class="module-badge badge-yellow">Power Controller</span>
+  </div>
+</nav>
+
+<div class="module-page">
+  <div class="module-hero reveal">
+    <div class="module-badge badge-yellow">04 — Adaptive Power Controller</div>
+    <h1 class="module-hero-title">Write once,<br/><span style="color:var(--yellow)">sleep longer</span></h1>
+    <p class="module-hero-sub">Workload consolidation buffers writes in RAM, flushing in smart 4MB batches — maximizing Deep Sleep and saving up to 70% power versus reactive storage.</p>
+  </div>
+
+  <div class="module-content">
+
+    <!-- Power states legend -->
+    <div class="glass reveal" style="margin-bottom:2rem;">
+      <div style="font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:1rem">Power State Machine</div>
+      <div class="state-machine">
+        <div class="state-node" style="background:rgba(227,30,36,0.15);border-color:rgba(227,30,36,0.4);color:#ff6b6b">🔴 Active — 2.3W</div>
+        <div class="state-arrow">→ 50ms →</div>
+        <div class="state-node" style="background:rgba(255,107,107,0.1);border-color:rgba(255,107,107,0.3);color:#ff6b6b">🟠 Idle — 1.2W</div>
+        <div class="state-arrow">→ 1s →</div>
+        <div class="state-node" style="background:rgba(78,205,196,0.1);border-color:rgba(78,205,196,0.3);color:var(--teal)">🔵 Light Sleep — 0.5W</div>
+        <div class="state-arrow">→ 2s →</div>
+        <div class="state-node" style="background:rgba(167,139,250,0.1);border-color:rgba(167,139,250,0.3);color:var(--purple)">🟣 Deep Sleep — 0.1W</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:280px 1fr;gap:1.5rem;align-items:start;">
+
+      <!-- Controls -->
+      <aside class="sidebar">
+        <div class="glass reveal" style="margin-bottom:1rem;">
+          <div style="font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:1rem">Send Write Request</div>
+          <div class="write-btns">
+            <button class="write-btn" onclick="sendWrite(1)"><div class="wb-icon">📝</div><div class="wb-title">1 KB Log</div><div class="wb-sub">GPS / telemetry</div></button>
+            <button class="write-btn" onclick="sendWrite(1024)"><div class="wb-icon">📸</div><div class="wb-title">1 MB Photo</div><div class="wb-sub">Camera frame</div></button>
+            <button class="write-btn" onclick="sendWrite(4096)"><div class="wb-icon">💾</div><div class="wb-title">4 MB Data</div><div class="wb-sub">Fills buffer!</div></button>
+            <button class="write-btn" onclick="burstWrites()"><div class="wb-icon">⚡</div><div class="wb-title">100 Writes</div><div class="wb-sub">Mixed burst</div></button>
+          </div>
+          <button class="btn btn-ghost" style="width:100%;font-size:0.8rem;" onclick="resetSim()">🔄 Reset</button>
+        </div>
+
+        <!-- AURA buffer status -->
+        <div class="glass reveal">
+          <div style="font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.75rem">AURA Write Buffer</div>
+          <div class="buffer-visual">
+            <div class="buffer-fill" id="buffer-fill" style="width:0%;background:linear-gradient(90deg,var(--teal),#44a08d);color:#000">
+              <span id="buffer-label">0 KB</span>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--muted);">
+            <span id="buffer-pct">0%</span><span>4096 KB cap</span>
+          </div>
+          <div id="buffer-status" style="margin-top:0.75rem;font-size:0.8rem;color:var(--teal)">✅ Buffer empty — Deep Sleep</div>
+        </div>
+      </aside>
+
+      <!-- Main charts -->
+      <main>
+        <!-- Live state indicators -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
+          <div class="glass reveal">
+            <div style="font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.75rem">Traditional System</div>
+            <div class="power-state-badge" id="baseline-badge" style="background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.3);color:var(--purple)">🟣 Deep Sleep — 0.1W</div>
+            <div class="metrics-row" style="margin-top:1rem;border-radius:10px;">
+              <div class="metric-cell" style="padding:1rem"><div class="metric-val" id="bl-power" style="font-size:1.3rem;">0.1</div><div class="metric-label">Watts</div></div>
+              <div class="metric-cell" style="padding:1rem"><div class="metric-val red" id="bl-wakeups" style="font-size:1.3rem;">0</div><div class="metric-label">Wake-ups</div></div>
+            </div>
+          </div>
+          <div class="glass reveal">
+            <div style="font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.75rem">AURA System</div>
+            <div class="power-state-badge" id="aura-badge" style="background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.3);color:var(--purple)">🟣 Deep Sleep — 0.1W</div>
+            <div class="metrics-row" style="margin-top:1rem;border-radius:10px;">
+              <div class="metric-cell" style="padding:1rem"><div class="metric-val teal" id="aura-power" style="font-size:1.3rem;">0.1</div><div class="metric-label">Watts</div></div>
+              <div class="metric-cell" style="padding:1rem"><div class="metric-val yellow" id="savings-pct" style="font-size:1.3rem;">0%</div><div class="metric-label">Savings</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Power charts -->
+        <div class="compare-grid reveal">
+          <div class="chart-wrap">
+            <div class="chart-title">Traditional — Reactive Power</div>
+            <canvas id="baseline-chart" style="max-height:200px"></canvas>
+          </div>
+          <div class="chart-wrap">
+            <div class="chart-title">AURA — Consolidated Power</div>
+            <canvas id="aura-chart" style="max-height:200px"></canvas>
+          </div>
+        </div>
+
+        <!-- Overall savings -->
+        <div class="metrics-row reveal" style="margin-top:1.5rem;">
+          <div class="metric-cell"><div class="metric-val" id="m-time">0ms</div><div class="metric-label">Sim Time</div></div>
+          <div class="metric-cell"><div class="metric-val yellow" id="m-savings">0%</div><div class="metric-label">Power Savings</div></div>
+          <div class="metric-cell"><div class="metric-val teal" id="m-buffer">0 KB</div><div class="metric-label">Buffer Used</div></div>
+          <div class="metric-cell"><div class="metric-val" id="m-events">0</div><div class="metric-label">Events</div></div>
+        </div>
+
+        <!-- Event log -->
+        <div style="margin-top:1.5rem;">
+          <div style="font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.75rem">Event Log</div>
+          <div class="event-log" id="event-log">Ready — send write requests to start simulation…</div>
+        </div>
+      </main>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/global.js"></script>
+<script>
+let blChart, auraChart;
+let totalEvents = 0;
+let blWakeups = 0;
+
+const CHART_OPTS = {
+  responsive: true, animation: { duration: 200 },
+  plugins: { legend: { display: false } },
+  scales: {
+    x: { ticks: { color: 'rgba(255,255,255,0.3)', font: { size: 9 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
+    y: { min: 0, max: 2.8, ticks: { color: 'rgba(255,255,255,0.3)', font: { size: 9 } }, grid: { color: 'rgba(255,255,255,0.04)' } }
+  }
+};
+
+function mkPowerChart(id, color) {
+  const ctx = document.getElementById(id).getContext('2d');
+  return new Chart(ctx, {
+    type: 'line',
+    data: { labels: [], datasets: [{ data: [], borderColor: color, backgroundColor: color+'18', borderWidth: 2, fill: true, stepped: true, pointRadius: 0 }] },
+    options: CHART_OPTS
+  });
+}
+
+blChart   = mkPowerChart('baseline-chart', '#ff6b6b');
+auraChart = mkPowerChart('aura-chart',     '#4ECDC4');
+
+function stateStyle(state) {
+  const map = {
+    'Active':       { bg:'rgba(227,30,36,0.15)',  border:'rgba(227,30,36,0.4)',  color:'#ff6b6b',      icon:'🔴' },
+    'Idle':         { bg:'rgba(255,107,107,0.1)', border:'rgba(255,107,107,0.3)',color:'#ff6b6b',      icon:'🟠' },
+    'Light Sleep':  { bg:'rgba(78,205,196,0.1)',  border:'rgba(78,205,196,0.3)', color:'var(--teal)',  icon:'🔵' },
+    'Deep Sleep':   { bg:'rgba(167,139,250,0.1)', border:'rgba(167,139,250,0.3)',color:'var(--purple)','icon':'🟣' },
+  };
+  return map[state] || map['Deep Sleep'];
+}
+
+function updateBadge(id, state, power) {
+  const el = document.getElementById(id);
+  const s = stateStyle(state);
+  el.style.background = s.bg; el.style.border = `1px solid ${s.border}`; el.style.color = s.color;
+  el.textContent = `${s.icon} ${state} — ${power}W`;
+}
+
+async function sendWrite(kb) {
+  const data = await AURA.post('/api/module4/write', { sizeKb: kb });
+  updateUI(data, kb);
+}
+
+async function burstWrites() {
+  for (let i = 0; i < 50; i++) {
+    const kb = Math.random() > 0.7 ? Math.floor(Math.random() * 100) + 10 : 0;
+    const data = await AURA.post('/api/module4/write', { sizeKb: kb });
+    updateUI(data, kb);
+    await new Promise(r => setTimeout(r, 60));
+  }
+}
+
+function updateUI(data, kb) {
+  updateBadge('baseline-badge', data.baselineState, data.baselinePower);
+  updateBadge('aura-badge',     data.auraState,     data.auraPower);
+
+  document.getElementById('bl-power').textContent  = data.baselinePower;
+  document.getElementById('aura-power').textContent = data.auraPower;
+  document.getElementById('savings-pct').textContent = data.powerSavingsPercent + '%';
+
+  if (data.baselineState === 'Active') blWakeups++;
+  document.getElementById('bl-wakeups').textContent = blWakeups;
+
+  document.getElementById('m-time').textContent    = data.simulationTimeMs + 'ms';
+  document.getElementById('m-savings').textContent = data.powerSavingsPercent + '%';
+  document.getElementById('m-buffer').textContent  = data.bufferUsedKb + ' KB';
+  document.getElementById('m-events').textContent  = ++totalEvents;
+
+  // Buffer bar
+  const pct = Math.min(data.bufferPercent, 100);
+  document.getElementById('buffer-fill').style.width = pct + '%';
+  document.getElementById('buffer-label').textContent = data.bufferUsedKb + ' KB';
+  document.getElementById('buffer-pct').textContent = pct + '%';
+  const bufStatus = document.getElementById('buffer-status');
+  if (pct >= 100) {
+    bufStatus.style.color = 'var(--red)';
+    bufStatus.textContent = '🔥 BUFFER FULL — Flushing to storage!';
+  } else if (pct > 70) {
+    bufStatus.style.color = 'var(--yellow)';
+    bufStatus.textContent = '⚠ Buffer nearly full — Flush imminent';
+  } else if (pct > 0) {
+    bufStatus.style.color = 'var(--teal)';
+    bufStatus.textContent = `📊 Collecting writes — ${pct}% full`;
+  } else {
+    bufStatus.style.color = 'var(--teal)';
+    bufStatus.textContent = '✅ Buffer empty — Deep Sleep';
+  }
+
+  // Update charts with step data
+  function pushStep(chart, time, power) {
+    chart.data.labels.push(time + 'ms');
+    chart.data.datasets[0].data.push(power);
+    if (chart.data.labels.length > 60) { chart.data.labels.shift(); chart.data.datasets[0].data.shift(); }
+    chart.update('none');
+  }
+  pushStep(blChart,   data.simulationTimeMs, data.baselinePower);
+  pushStep(auraChart, data.simulationTimeMs, data.auraPower);
+
+  // Event log
+  if (data.events && data.events.length > 0) {
+    const log = document.getElementById('event-log');
+    const lastEvent = data.events[data.events.length - 1];
+    if (lastEvent) {
+      const cls = lastEvent.includes('ACTIVE') ? 'log-critical' : lastEvent.includes('Complete') ? 'log-ok' : '';
+      log.innerHTML += `<span class="${cls}">${lastEvent}</span>\n`;
+      log.scrollTop = log.scrollHeight;
+    }
+  }
+}
+
+async function resetSim() {
+  await fetch('/api/module4/reset', { method: 'POST' });
+  blChart.data.labels = []; blChart.data.datasets[0].data = []; blChart.update();
+  auraChart.data.labels = []; auraChart.data.datasets[0].data = []; auraChart.update();
+  blWakeups = 0; totalEvents = 0;
+  document.getElementById('event-log').textContent = 'Simulation reset — ready for new writes…\n';
+  ['m-time','m-savings','m-buffer','m-events'].forEach(id => document.getElementById(id).textContent = id==='m-time'?'0ms':'0');
+  document.getElementById('buffer-fill').style.width = '0%';
+  document.getElementById('buffer-pct').textContent = '0%';
+  document.getElementById('buffer-label').textContent = '0 KB';
+  updateBadge('baseline-badge','Deep Sleep',0.1);
+  updateBadge('aura-badge','Deep Sleep',0.1);
+  document.getElementById('bl-power').textContent='0.1';
+  document.getElementById('aura-power').textContent='0.1';
+  document.getElementById('savings-pct').textContent='0%';
+  document.getElementById('bl-wakeups').textContent='0';
+}
+</script>
+</body>
+</html>
